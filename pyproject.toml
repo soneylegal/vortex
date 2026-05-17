@@ -48,6 +48,7 @@ dev = [
     "respx>=0.21.0",
 ]
 
+
 [tool.ruff]
 line-length = 88
 target-version = "py312"
