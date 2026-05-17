@@ -1,10 +1,19 @@
 import logging
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from src.app.api.v1 import chat
 from src.app.core.config import settings
-from src.app.graph.workflow import get_workflow
-from src.shared.schemas import ChatRequest, ChatResponse, SourceDocument
+from src.app.core.exceptions import (
+    BaseAPIException,
+    api_exception_handler,
+    global_exception_handler,
+    http_exception_handler,
+)
+from src.app.core.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +53,14 @@ app = FastAPI(
     ),
 )
 
-# Initialize graph workflow
-workflow = get_workflow()
+# Setup Rate Limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Setup Exception Handlers (RFC 7807)
+app.add_exception_handler(Exception, global_exception_handler)
+app.add_exception_handler(BaseAPIException, api_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 
 
 @app.get("/health")
@@ -54,38 +69,5 @@ async def health_check():
     return {"status": "ok"}
 
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
-    """
-    Submit a question to the Vortex agentic workflow.
-
-    The Router Node classifies the query and dispatches it to either:
-    - The RAG pipeline (retrieve → grade → generate) for technical questions.
-    - A direct LLM response for general queries.
-    """
-    try:
-        initial_state = {
-            "question": request.query,
-            "generation": "",
-            "documents": [],
-            "steps": ["received_query"],
-            "route": "",
-            "retry_count": 0,
-        }
-
-        result = await workflow.ainvoke(initial_state)
-
-        sources = [
-            SourceDocument(content=doc.page_content, metadata=doc.metadata)
-            for doc in result.get("documents", [])
-        ]
-
-        return ChatResponse(
-            answer=result.get("generation", "I could not generate an answer."),
-            sources=sources,
-            steps=result.get("steps", []),
-            route=result.get("route", ""),
-        )
-    except Exception as e:
-        logger.error("Workflow execution failed", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+# Register Routers
+app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
