@@ -55,12 +55,12 @@ app = FastAPI(
 
 # Setup Rate Limiting
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 # Setup Exception Handlers (RFC 7807)
 app.add_exception_handler(Exception, global_exception_handler)
-app.add_exception_handler(BaseAPIException, api_exception_handler)
-app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(BaseAPIException, api_exception_handler)  # type: ignore[arg-type]
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)  # type: ignore[arg-type]
 
 
 @app.get("/health")

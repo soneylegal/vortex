@@ -68,6 +68,6 @@ def router_node(state: AgentState) -> dict[str, Any]:
 
     return {
         "question": question,
-        "route": result.route,
+        "route": result.route,  # type: ignore[union-attr]
         "steps": steps,
     }

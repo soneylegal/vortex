@@ -78,7 +78,7 @@ def grade_documents_node(state: AgentState) -> dict[str, Any]:
         score = retrieval_grader.invoke(
             {"question": question, "document": d.page_content}
         )
-        if score.binary_score == "yes":
+        if score.binary_score == "yes":  # type: ignore[union-attr]
             filtered_docs.append(d)
 
     return {"documents": filtered_docs, "question": question, "steps": steps}

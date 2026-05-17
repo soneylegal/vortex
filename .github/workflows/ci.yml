@@ -23,19 +23,21 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv pip install -e ".[dev]" --system
+        run: |
+          uv venv
+          uv pip install -e ".[dev]"
 
       - name: Lint (ruff check)
-        run: ruff check .
+        run: uv run ruff check .
 
       - name: Format check (ruff format)
-        run: ruff format --check .
+        run: uv run ruff format --check .
 
       - name: Type check (mypy)
-        run: mypy src/ --ignore-missing-imports
+        run: uv run mypy src/ --ignore-missing-imports
 
       - name: Unit tests (pytest)
-        run: pytest tests/ -v --tb=short -x
+        run: uv run pytest tests/ -v --tb=short -x
         env:
           # Prevent tests from trying to connect to real LLM APIs
           LLM_PROVIDER: gemini
