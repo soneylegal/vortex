@@ -2,9 +2,18 @@
 
 
 
+## v0.2.0 (2026-05-20)
+
+### Feature
+
+* feat: add BYOK support and dynamic LLM provider selection via headers ([`bfc627c`](https://github.com/soneylegal/vortex/commit/bfc627cefa1e4f729d474c4eeb5b433af248e7d0))
+
+
 ## v0.1.0 (2026-05-17)
 
 ### Chore
+
+* chore(release): v0.1.0 [skip ci] ([`9ff61e6`](https://github.com/soneylegal/vortex/commit/9ff61e68ab6d3de42393b2d82891eea7194e3d08))
 
 * chore: implement semantic release and add apache license ([`de29d2d`](https://github.com/soneylegal/vortex/commit/de29d2db3bcc6c8b4f136c792aeceaf5ff7f42fd))
 
