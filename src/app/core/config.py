@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     # Agent Behavior
     max_rewrite_retries: int = 2
 
+    # Cache Settings
+    enable_semantic_cache: bool = True
+    semantic_cache_threshold: float = 0.1
+
     # OpenTelemetry / Arize Phoenix (optional, self-hosted)
     phoenix_collector_endpoint: str | None = None
 
