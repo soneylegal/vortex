@@ -26,3 +26,4 @@ class AgentState(TypedDict):
     retry_count: int
     api_key: NotRequired[str | None]
     provider: NotRequired[str | None]
+    error: NotRequired[str | None]
