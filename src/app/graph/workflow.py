@@ -33,6 +33,8 @@ from src.app.graph.state import AgentState
 
 def route_query(state: AgentState) -> str:
     """Route based on the Router Node's classification."""
+    if state.get("error") or state.get("route") == "fallback":
+        return "fallback"
     return state["route"]  # "retrieve" or "direct"
 
 
@@ -41,6 +43,8 @@ def decide_to_generate(state: AgentState) -> str:
     After grading, decide whether to generate an answer or rewrite the query.
     Returns 'generate' if there are relevant documents, 'rewrite_query' otherwise.
     """
+    if state.get("error"):
+        return "fallback"
     if state["documents"]:
         return "generate"
     return "rewrite_query"
@@ -51,6 +55,8 @@ def check_retry_limit(state: AgentState) -> str:
     After rewriting, decide whether to retry retrieval or fall back.
     Compares retry_count against the configured max_rewrite_retries.
     """
+    if state.get("error"):
+        return "fallback"
     if state.get("retry_count", 0) >= settings.max_rewrite_retries:
         return "fallback"
     return "retrieve"
@@ -84,6 +90,7 @@ def get_workflow():
         {
             "retrieve": "retrieve",
             "direct": "direct_response",
+            "fallback": "fallback",
         },
     )
 
@@ -96,6 +103,7 @@ def get_workflow():
         {
             "generate": "generate",
             "rewrite_query": "rewrite_query",
+            "fallback": "fallback",
         },
     )
 
