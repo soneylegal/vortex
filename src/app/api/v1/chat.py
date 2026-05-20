@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from langgraph.graph.state import CompiledStateGraph
 
 from src.app.core.dependencies import get_agent_workflow
@@ -18,6 +18,9 @@ async def chat_endpoint(
     request: Request,
     payload: ChatRequest,
     workflow: CompiledStateGraph = Depends(get_agent_workflow),
+    authorization: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None),
+    x_provider: str | None = Header(default=None),
 ):
     """
     Submit a question to the Vortex agentic workflow.
@@ -26,6 +29,25 @@ async def chat_endpoint(
     - The RAG pipeline (retrieve → grade → generate) for technical questions.
     - A direct LLM response for general queries.
     """
+    provider = x_provider.lower() if x_provider else None
+    if provider and provider not in ["gemini", "anthropic", "ollama"]:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Unsupported LLM provider: {x_provider}. "
+                "Supported providers: gemini, anthropic, ollama"
+            ),
+        )
+
+    api_key = None
+    if authorization:
+        if authorization.startswith("Bearer "):
+            api_key = authorization[7:]
+        else:
+            api_key = authorization
+    elif x_api_key:
+        api_key = x_api_key
+
     try:
         initial_state = {
             "question": payload.query,
@@ -34,6 +56,8 @@ async def chat_endpoint(
             "steps": ["received_query"],
             "route": "",
             "retry_count": 0,
+            "api_key": api_key,
+            "provider": provider,
         }
 
         result = await workflow.ainvoke(initial_state)

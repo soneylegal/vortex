@@ -5,17 +5,20 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from .config import settings
 
 
-@functools.lru_cache(maxsize=1)
-def get_llm() -> BaseChatModel:
+@functools.lru_cache(maxsize=32)
+def get_llm(api_key: str | None = None, provider: str | None = None) -> BaseChatModel:
     """
-    Returns the appropriate LLM instance based on configuration.
+    Returns the appropriate LLM instance based on configuration or dynamic inputs.
     Supports Gemini (free), Ollama (local), and Anthropic (paid).
 
     The instance is cached so that all graph nodes share a single LLM client
-    per process, avoiding redundant re-initialization on every node call.
+    per process/key, avoiding redundant re-initialization on every node call.
     """
-    if settings.llm_provider == "gemini":
-        if not settings.gemini_api_key:
+    active_provider = provider or settings.llm_provider
+
+    if active_provider == "gemini":
+        active_key = api_key or settings.gemini_api_key
+        if not active_key:
             raise ValueError(
                 "GEMINI_API_KEY must be set to use Gemini. "
                 "Get a free key at https://aistudio.google.com/"
@@ -24,11 +27,11 @@ def get_llm() -> BaseChatModel:
 
         return ChatGoogleGenerativeAI(
             model=settings.gemini_model,
-            google_api_key=settings.gemini_api_key,
+            google_api_key=active_key,
             temperature=0.0,
         )
 
-    elif settings.llm_provider == "ollama":
+    elif active_provider == "ollama":
         try:
             from langchain_ollama import ChatOllama
         except ImportError as exc:
@@ -42,8 +45,9 @@ def get_llm() -> BaseChatModel:
             temperature=0.0,
         )
 
-    elif settings.llm_provider == "anthropic":
-        if not settings.anthropic_api_key:
+    elif active_provider == "anthropic":
+        active_key = api_key or settings.anthropic_api_key
+        if not active_key:
             raise ValueError("ANTHROPIC_API_KEY must be set to use Anthropic.")
         try:
             from langchain_anthropic import ChatAnthropic
@@ -54,9 +58,9 @@ def get_llm() -> BaseChatModel:
             ) from exc
         return ChatAnthropic(
             model=settings.anthropic_model,
-            api_key=settings.anthropic_api_key,
+            api_key=active_key,
             temperature=0.0,
         )
 
     else:
-        raise ValueError(f"Unsupported LLM provider: {settings.llm_provider}")
+        raise ValueError(f"Unsupported LLM provider: {active_provider}")

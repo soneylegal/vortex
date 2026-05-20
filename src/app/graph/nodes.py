@@ -49,7 +49,7 @@ def grade_documents_node(state: AgentState) -> dict[str, Any]:
     steps = list(state.get("steps", []))
     steps.append("grade_documents")
 
-    llm = get_llm()
+    llm = get_llm(api_key=state.get("api_key"), provider=state.get("provider"))
     structured_llm_grader = llm.with_structured_output(Grade)
 
     system = (
@@ -91,7 +91,7 @@ def generate_node(state: AgentState) -> dict[str, Any]:
     steps = list(state.get("steps", []))
     steps.append("generate_answer")
 
-    llm = get_llm()
+    llm = get_llm(api_key=state.get("api_key"), provider=state.get("provider"))
     prompt = ChatPromptTemplate.from_template(
         "You are an expert IT infrastructure support "
         "assistant for the Cortex and Sentinel platforms. "
@@ -126,7 +126,7 @@ def direct_response_node(state: AgentState) -> dict[str, Any]:
     steps = list(state.get("steps", []))
     steps.append("direct_response")
 
-    llm = get_llm()
+    llm = get_llm(api_key=state.get("api_key"), provider=state.get("provider"))
     prompt = ChatPromptTemplate.from_template(
         "You are a helpful IT support assistant. Answer the following question "
         "directly and concisely.\n\n"
@@ -157,7 +157,7 @@ def rewrite_query_node(state: AgentState) -> dict[str, Any]:
     steps = list(state.get("steps", []))
     steps.append("rewrite_query")
 
-    llm = get_llm()
+    llm = get_llm(api_key=state.get("api_key"), provider=state.get("provider"))
     system = (
         "You are a question re-writer that converts an input question to a better "
         "version optimized for vector store retrieval. Reason about the underlying "

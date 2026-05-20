@@ -38,7 +38,7 @@ def router_node(state: AgentState) -> dict[str, Any]:
     steps = list(state.get("steps", []))
     steps.append("router")
 
-    llm = get_llm()
+    llm = get_llm(api_key=state.get("api_key"), provider=state.get("provider"))
     structured_llm = llm.with_structured_output(RouteDecision)
 
     system = (
