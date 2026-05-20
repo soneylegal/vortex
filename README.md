@@ -1,166 +1,164 @@
 # Vortex — Agentic AI Orchestrator
 
-> A production-ready Agentic RAG Orchestrator architected for Anthropic Claude 3.5 Sonnet, featuring a model-agnostic layer with free tier support for Google Gemini and local Ollama inference.
+<p align="center">
+  <a href="https://github.com/soneylegal/vortex/actions/workflows/ci.yml">
+    <img src="https://github.com/soneylegal/vortex/actions/workflows/ci.yml/badge.svg" alt="CI Status">
+  </a>
+  <a href="https://opensource.org/licenses/Apache-2.0">
+    <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
+  </a>
+  <img src="https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue" alt="Python Versions">
+  <img src="https://img.shields.io/badge/Semantic%20Cache-ChromaDB-green" alt="Semantic Cache">
+  <a href="https://github.com/astral-sh/ruff">
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff Code Style">
+  </a>
+  <a href="http://mypy-lang.org/">
+    <img src="http://www.mypy-lang.org/static/mypy_badge.svg" alt="Mypy Checked">
+  </a>
+</p>
 
-Vortex is a self-corrective RAG (Retrieval-Augmented Generation) system built on **LangGraph** that dynamically routes queries, evaluates document relevance, rewrites failed searches, and gracefully falls back — all orchestrated as a stateful multi-actor graph.
+Vortex is a production-grade, state-of-the-art **Corrective RAG (CRAG) Agentic Orchestrator** designed for automated IT support and troubleshooting. Built on **LangGraph**, it dynamically routes queries, evaluates document relevance, rewrites failed searches, and gracefully falls back — all orchestrated as a stateful, resilient multi-actor graph.
 
-## Architecture
+---
+
+## 🗺️ Graph Architecture & Topology
+
+Vortex models the troubleshooting lifecycle as a robust state machine. It evaluates retrieved context before generating answers, rewrites query formulations when searches fail, and routes to fallback modes on system faults:
 
 ```mermaid
 graph TD
-    A[User Query] --> B[Router Node]
-    B -->|Needs Docs| C[Retrieve<br/>ChromaDB]
-    B -->|General Query| D[Direct Response<br/>LLM]
-    C --> E[Grade Documents]
-    E -->|Valid| F[Generate Answer<br/>RAG]
-    E -->|Invalid| G[Rewrite Query]
-    G -->|Retries Left| C
-    G -->|Exhausted| H[Fallback Response]
-    D --> I[Final Response]
-    F --> I
-    H --> I
-
-    style B fill:#6366f1,color:#fff
-    style C fill:#0ea5e9,color:#fff
-    style E fill:#f59e0b,color:#fff
-    style F fill:#22c55e,color:#fff
-    style G fill:#ef4444,color:#fff
-    style H fill:#6b7280,color:#fff
-    style D fill:#22c55e,color:#fff
+    START([START]) --> Router{Router Node}
+    
+    %% Router decisions
+    Router -- "Needs Docs ('retrieve')" --> Retrieve[Retrieve Node]
+    Router -- "General Q ('direct')" --> Direct[Direct Response Node]
+    Router -- "System Error ('fallback')" --> Fallback[Fallback Node]
+    
+    %% RAG pipeline
+    Retrieve --> Grade[Grade Documents Node]
+    
+    %% Grader decisions
+    Grade --> DecideGenerate{Decide to Generate?}
+    DecideGenerate -- "Has Relevant Docs" --> Generate[Generate Node]
+    DecideGenerate -- "No Relevant Docs" --> Rewrite[Rewrite Query Node]
+    DecideGenerate -- "System Error" --> Fallback
+    
+    %% Rewrite Loop Protection
+    Rewrite --> CheckLimit{Check Retry Limit?}
+    CheckLimit -- "Retries < Max" --> Retrieve
+    CheckLimit -- "Retries >= Max" --> Fallback
+    CheckLimit -- "System Error" --> Fallback
+    
+    %% Terminal Nodes
+    Generate --> END([END])
+    Direct --> END
+    Fallback --> END
 ```
 
-## Features
+---
 
-- **Self-Corrective RAG** — LangGraph state machine evaluates document relevance before generation, rewrites queries on failure, and falls back gracefully after configurable retries.
-- **Intelligent Router** — LLM-based query classifier routes technical questions to the RAG pipeline and general queries to direct response, avoiding unnecessary vector searches.
-- **Model-Agnostic Layer** — Seamlessly switch between Google Gemini (free tier), Ollama (local), and Anthropic Claude 3.5 Sonnet via a single environment variable.
-- **Local Vector Search** — Embedded ChromaDB with CPU-friendly `all-MiniLM-L6-v2` embeddings for zero-cost semantic search.
-- **AI Observability** — OpenTelemetry instrumentation with self-hosted Arize Phoenix for real-time trace visualization of agent decision flows.
+## 🚀 Key Features
 
-## Technology Stack
+*   **Self-Corrective RAG (CRAG)**: LangGraph state machine dynamically grades retrieved documentation relevance, filters out noise, and initiates rewrite loops for failed queries.
+*   **Bring Your Own Key (BYOK)**: Supports dynamic, request-level API credentials and provider routing via HTTP headers (`Authorization`, `X-API-Key`, `X-Provider`).
+*   **Zero-Cost Local Semantic Cache**: Persistent ChromaDB-backed similarity cache using a shared local Sentence-Transformers embeddings model. It features provider-level partition isolation to avoid cross-provider context leaks.
+*   **Chaos Engineering Resilience**: Complete exception shielding across all graph nodes (ChromaDB down, LLM timeouts, grading exceptions) with fast-bypass routing to fallbacks, guaranteeing zero HTTP 500 crashes.
+*   **Model-Agnostic Engine**: Native support for Google Gemini, Anthropic Claude, and local Ollama models with seamless environment-level fallback.
+*   **Observability**: Integrated OpenTelemetry/OpenInference telemetry compatible with Arize Phoenix for step-by-step agent execution tracing.
 
-| Layer | Technology |
-|-------|-----------|
-| Runtime | Python 3.12 |
-| Web Framework | FastAPI (AsyncIO) |
-| Agent Framework | LangGraph + LangChain |
-| LLM (default) | Google Gemini 2.5 Flash (free tier) |
-| LLM (optional) | Anthropic Claude 3.5 Sonnet, Ollama |
-| Vector Database | ChromaDB (embedded, on-disk) |
-| Embeddings | sentence-transformers/all-MiniLM-L6-v2 |
-| Observability | OpenTelemetry → Arize Phoenix |
-| CI/CD | GitHub Actions |
-| Package Management | uv / pip |
+---
 
-## Quick Start
+## 🛠️ Technology Stack
 
-### 1. Clone and Install
+| Layer | Technology | Description |
+| :--- | :--- | :--- |
+| **Runtime** | Python 3.12 / 3.13 / 3.14 | High-performance async runtime |
+| **Web Framework** | FastAPI (AsyncIO) | ASGI web server for fast API delivery |
+| **Agent Engine** | LangGraph & LangChain | Stateful multi-actor graph orchestration |
+| **Vector Store** | ChromaDB (Embedded) | Persistent vector index for local documents |
+| **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` | CPU-friendly embeddings for zero cost |
+| **Observability** | OpenTelemetry + Arize Phoenix | Distributed tracing and LLM evaluation |
+| **Build & Tooling** | Hatchling, Ruff, Mypy, pytest | Standardized modern Python developer experience |
+
+---
+
+## 📖 Live Documentation Portal
+
+Vortex includes a fully-featured documentation portal built with **MkDocs-Material**. To view the complete architectural guides, step-by-step setups, caching metrics, and API design specifications:
 
 ```bash
-git clone https://github.com/your-username/vortex.git
+# Run local live-reload documentation server
+mkdocs serve
+```
+Then visit [http://localhost:8000](http://localhost:8000) in your browser.
+
+---
+
+## 🏁 Quick Start
+
+### 1. Installation
+Clone the repository and install the development dependencies in editable mode:
+
+```bash
+git clone https://github.com/soneylegal/vortex.git
 cd vortex
 
-# Using uv (recommended)
-uv pip install -e ".[dev]"
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
 
-# Or using pip
+# Install requirements
 pip install -e ".[dev]"
 ```
 
-### 2. Configure Environment
-
+### 2. Configuration
+Copy the configuration template and fill in your model API credentials:
 ```bash
 cp .env.example .env
-# Edit .env with your Gemini API key (free at https://aistudio.google.com/)
 ```
 
-### 3. Ingest Knowledge Base
-
+### 3. Ingest Documentation
+Incorporate the Cortex serverless data pipeline and Sentinel monitoring manuals into the vector database:
 ```bash
 make ingest
 ```
 
-### 4. Run the Server
-
+### 4. Run the API Server
+Start the FastAPI server:
 ```bash
 make run
-# API available at http://localhost:8000
-# Swagger docs at http://localhost:8000/docs
 ```
+*   **API Endpoint**: `http://localhost:8000`
+*   **Interactive Swagger UI**: `http://localhost:8000/docs`
 
-### 5. Test the Agent
+---
+
+## 🧪 Development & Quality Checks
+
+Maintain repository standards by executing the local check suite before committing changes:
 
 ```bash
-# Technical question (RAG pipeline)
-curl -X POST http://localhost:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{"query": "How do I fix Cortex Error 503?"}'
-
-# General question (direct response)
-curl -X POST http://localhost:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What is 2+2?"}'
+make lint        # Run Ruff code linter
+make format      # Run Ruff code formatter check
+make typecheck   # Run Mypy static type verification
+make test        # Run Pytest suite (including chaos and caching tests)
+make ci          # Run all linting, typechecking, and tests in one command
 ```
 
-## Docker Compose (with Phoenix Observability)
+---
+
+## 🐳 Docker Compose (With Observability Stack)
+
+Spin up the entire stack including the API and the Arize Phoenix tracing UI:
 
 ```bash
 docker compose up -d
 ```
+*   **API Portal**: `http://localhost:8000`
+*   **Phoenix Dashboard**: `http://localhost:6006`
 
-This starts:
-- **Vortex API** at `http://localhost:8000`
-- **Arize Phoenix** at `http://localhost:6006` (trace visualization)
+---
 
-## Development
+## 📄 License
 
-```bash
-make lint        # Run ruff linter
-make format      # Auto-format code
-make typecheck   # Run mypy
-make test        # Run pytest
-make ci          # Run all checks (lint + typecheck + tests)
-```
-
-## Project Structure
-
-```
-vortex/
-├── src/
-│   ├── app/
-│   │   ├── main.py               # FastAPI server & routes
-│   │   ├── core/
-│   │   │   ├── config.py          # Environment configuration
-│   │   │   └── llm.py             # LLM provider factory
-│   │   ├── graph/
-│   │   │   ├── state.py           # AgentState definition
-│   │   │   ├── router.py          # LLM-based query classifier
-│   │   │   ├── nodes.py           # Graph processing nodes
-│   │   │   └── workflow.py        # StateGraph compilation
-│   │   └── services/
-│   │       └── vector_store.py    # ChromaDB management
-│   └── shared/
-│       └── schemas.py             # API request/response models
-├── data/knowledge_base/           # Cortex/Sentinel markdown manuals
-├── scripts/ingest_data.py         # Knowledge base ingestion
-├── tests/                         # Unit tests
-├── docker-compose.yml             # App + Phoenix stack
-├── Makefile                       # Task automation
-└── pyproject.toml                 # Dependencies & tooling config
-```
-
-## License
-
-Copyright 2026 Davi Laurindo
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Vortex is open-source software licensed under the [Apache License 2.0](LICENSE).
