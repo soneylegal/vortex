@@ -2,7 +2,18 @@
 
 
 
+## v0.3.0 (2026-05-20)
+
+### Feature
+
+* feat: implement local zero-cost semantic caching using ChromaDB ([`a694d07`](https://github.com/soneylegal/vortex/commit/a694d072a42210c0149a0976aaeb361a348f61cb))
+
+
 ## v0.2.0 (2026-05-20)
+
+### Chore
+
+* chore(release): v0.2.0 [skip ci] ([`af886a9`](https://github.com/soneylegal/vortex/commit/af886a9d96e1c51360174d06dc1b4845bb49fc2d))
 
 ### Feature
 

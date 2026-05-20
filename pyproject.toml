@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vortex"
-version = "0.2.0"
+version = "0.3.0"
 description = "Agentic RAG Orchestrator for Technical Support"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -47,6 +47,7 @@ dev = [
     "pytest-cov>=5.0.0",
     "respx>=0.21.0",
 ]
+
 
 
 
