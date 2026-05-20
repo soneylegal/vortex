@@ -3,8 +3,10 @@ import logging
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from langgraph.graph.state import CompiledStateGraph
 
+from src.app.core.config import settings
 from src.app.core.dependencies import get_agent_workflow
 from src.app.core.rate_limit import limiter
+from src.app.services.cache import get_semantic_cache
 from src.shared.schemas import ChatRequest, ChatResponse, SourceDocument
 
 logger = logging.getLogger(__name__)
@@ -48,6 +50,25 @@ async def chat_endpoint(
     elif x_api_key:
         api_key = x_api_key
 
+    # Check semantic cache if enabled
+    if settings.enable_semantic_cache:
+        cached = get_semantic_cache().lookup(payload.query, provider=provider)
+        if cached:
+            sources = [
+                SourceDocument(content=src["content"], metadata=src["metadata"])
+                for src in cached.get("sources", [])
+            ]
+            steps = list(cached.get("steps", []))
+            if "semantic_cache_hit" not in steps:
+                steps = ["semantic_cache_hit"] + steps
+
+            return ChatResponse(
+                answer=cached["answer"],
+                sources=sources,
+                steps=steps,
+                route=cached["route"],
+            )
+
     try:
         initial_state = {
             "question": payload.query,
@@ -66,6 +87,20 @@ async def chat_endpoint(
             SourceDocument(content=doc.page_content, metadata=doc.metadata)
             for doc in result.get("documents", [])
         ]
+
+        # Update cache if enabled
+        if settings.enable_semantic_cache:
+            serialized_sources = [
+                {"content": src.content, "metadata": src.metadata} for src in sources
+            ]
+            get_semantic_cache().update(
+                query=payload.query,
+                answer=result.get("generation", "I could not generate an answer."),
+                sources=serialized_sources,
+                steps=result.get("steps", []),
+                route=result.get("route"),
+                provider=provider,
+            )
 
         return ChatResponse(
             answer=result.get("generation", "I could not generate an answer."),
