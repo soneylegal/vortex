@@ -1,0 +1,59 @@
+site_name: Vortex
+site_description: Production-grade Agentic RAG Orchestrator for Technical Support
+site_author: Davi Laurindo
+site_url: https://soneylegal.github.io/vortex/
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+repo_name: soneylegal/vortex
+repo_url: https://github.com/soneylegal/vortex
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Features:
+      - Bring Your Own Key: features/byok.md
+      - Semantic Caching: features/caching.md
+      - Resilience & Chaos: features/resilience.md
+  - Developer Guide: developer-guide.md
