@@ -28,6 +28,7 @@ dependencies = [
     "opentelemetry-sdk>=1.25.0",
     "opentelemetry-exporter-otlp>=1.25.0",
     "slowapi>=0.1.9",
+    "python-json-logger>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -73,6 +74,8 @@ packages = ["src"]
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
 version_variables = []
+major_on_zero = false
+allow_zero_version = true
 build_command = "pip install build && python -m build"
 commit_message = "chore(release): v{version} [skip ci]"
 commit_parser = "angular"

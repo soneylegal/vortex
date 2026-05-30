@@ -76,7 +76,7 @@ def router_node(state: AgentState) -> dict[str, Any]:
             "steps": steps,
         }
     except Exception as e:
-        logger.error(f"Router node failed: {e}", exc_info=True)
+        logger.error("Router node failed: %s", e, exc_info=True)
         return {
             "question": question,
             "route": "fallback",

@@ -13,8 +13,12 @@ from src.app.core.exceptions import (
     global_exception_handler,
     http_exception_handler,
 )
+from src.app.core.logging import setup_logging
+from src.app.core.middleware import CorrelationIdMiddleware
 from src.app.core.rate_limit import limiter
 
+# ── Structured Logging ──────────────────────────────────────────────────
+setup_logging()
 logger = logging.getLogger(__name__)
 
 # ── OpenTelemetry / Arize Phoenix (optional, self-hosted) ───────────────
@@ -46,12 +50,15 @@ if settings.phoenix_collector_endpoint:
 # ── FastAPI Application ─────────────────────────────────────────────────
 app = FastAPI(
     title="Vortex — Agentic RAG Orchestrator",
-    version="0.1.0",
+    version="0.3.0",
     description=(
         "A production-ready Agentic RAG Orchestrator featuring a self-corrective "
         "LangGraph workflow with model-agnostic LLM support."
     ),
 )
+
+# ── Middleware ───────────────────────────────────────────────────────────
+app.add_middleware(CorrelationIdMiddleware)
 
 # Setup Rate Limiting
 app.state.limiter = limiter
@@ -63,10 +70,53 @@ app.add_exception_handler(BaseAPIException, api_exception_handler)  # type: igno
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)  # type: ignore[arg-type]
 
 
+# ── Health Check (expanded) ─────────────────────────────────────────────
 @app.get("/health")
 async def health_check():
-    """Liveness probe."""
-    return {"status": "ok"}
+    """
+    Liveness and readiness probe.
+
+    Reports connectivity status for ChromaDB and the embeddings model
+    in addition to the basic application status.
+    """
+    chromadb_status = "disconnected"
+    model_status = "not_loaded"
+
+    try:
+        from src.app.services.vector_store import _instance as vs_instance
+
+        if vs_instance is not None:
+            vs_instance.vector_store._collection.count()
+            chromadb_status = "connected"
+    except Exception:
+        logger.warning("Health check: ChromaDB connectivity failed", exc_info=True)
+
+    try:
+        from src.app.services.vector_store import _instance as vs_instance
+
+        if vs_instance is not None and vs_instance.embeddings is not None:
+            model_status = "loaded"
+    except Exception:
+        logger.warning("Health check: Model readiness check failed", exc_info=True)
+
+    return {
+        "status": "ok",
+        "chromadb": chromadb_status,
+        "model": model_status,
+    }
+
+
+# ── Metrics Endpoint ────────────────────────────────────────────────────
+@app.get("/metrics")
+async def metrics_endpoint():
+    """
+    Expose semantic cache performance metrics.
+
+    Returns hit/miss counts, hit rate percentage, and average lookup latency.
+    """
+    from src.app.services.metrics import cache_metrics
+
+    return cache_metrics.snapshot()
 
 
 # Register Routers

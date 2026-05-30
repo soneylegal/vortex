@@ -6,6 +6,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
 from src.app.core.config import settings
+from src.app.services.metrics import CacheTimer, cache_metrics
 from src.app.services.vector_store import get_vector_store
 
 logger = logging.getLogger(__name__)
@@ -38,54 +39,67 @@ class SemanticCacheService:
         Lookup a query in the cache. Matches semantically similar queries
         with cosine distance below the configured threshold.
         """
-        try:
-            active_provider = provider or settings.llm_provider
-            filter_dict = {"provider": active_provider}
+        with CacheTimer() as timer:
+            try:
+                active_provider = provider or settings.llm_provider
+                filter_dict = {"provider": active_provider}
 
-            results = self.vector_store.similarity_search_with_score(
-                query, k=1, filter=filter_dict
-            )
-            if not results:
-                logger.info(f"Semantic cache MISS (no matches) for query: '{query}'")
-                return None
-
-            doc, distance = results[0]
-            logger.info(
-                f"Semantic cache match found. Distance: {distance:.4f} "
-                f"(threshold: {self.distance_threshold})"
-            )
-
-            if distance <= self.distance_threshold:
-                logger.info(
-                    f"Semantic cache HIT for query: '{query}' "
-                    f"(matched: '{doc.page_content}', dist: {distance:.4f})"
+                results = self.vector_store.similarity_search_with_score(
+                    query, k=1, filter=filter_dict
                 )
-                metadata = doc.metadata
+                if not results:
+                    logger.info(
+                        "Semantic cache MISS (no matches) for query: '%s'",
+                        query,
+                    )
+                    cache_metrics.record_miss(timer.duration_ms)
+                    return None
 
-                try:
-                    sources = json.loads(metadata.get("sources", "[]"))
-                except Exception:
-                    sources = []
+                doc, distance = results[0]
+                logger.info(
+                    "Semantic cache match found. Distance: %.4f (threshold: %s)",
+                    distance,
+                    self.distance_threshold,
+                )
 
-                try:
-                    steps = json.loads(metadata.get("steps", "[]"))
-                except Exception:
-                    steps = []
+                if distance <= self.distance_threshold:
+                    logger.info(
+                        "Semantic cache HIT for query: '%s' "
+                        "(matched: '%s', dist: %.4f)",
+                        query,
+                        doc.page_content,
+                        distance,
+                    )
+                    metadata = doc.metadata
 
-                return {
-                    "answer": metadata.get("answer", ""),
-                    "sources": sources,
-                    "steps": steps,
-                    "route": metadata.get("route") or None,
-                }
+                    try:
+                        sources = json.loads(metadata.get("sources", "[]"))
+                    except Exception:
+                        sources = []
 
-            logger.info(
-                f"Semantic cache MISS (distance {distance:.4f} > "
-                f"threshold {self.distance_threshold}) for: '{query}'"
-            )
-        except Exception as e:
-            logger.error(f"Failed to lookup in semantic cache: {e}", exc_info=True)
+                    try:
+                        steps = json.loads(metadata.get("steps", "[]"))
+                    except Exception:
+                        steps = []
 
+                    cache_metrics.record_hit(timer.duration_ms)
+                    return {
+                        "answer": metadata.get("answer", ""),
+                        "sources": sources,
+                        "steps": steps,
+                        "route": metadata.get("route") or None,
+                    }
+
+                logger.info(
+                    "Semantic cache MISS (distance %.4f > threshold %s) for: '%s'",
+                    distance,
+                    self.distance_threshold,
+                    query,
+                )
+            except Exception as e:
+                logger.error("Failed to lookup in semantic cache: %s", e, exc_info=True)
+
+        cache_metrics.record_miss(timer.duration_ms)
         return None
 
     def update(
@@ -112,11 +126,12 @@ class SemanticCacheService:
             )
             self.vector_store.add_documents([doc])
             logger.info(
-                f"Stored query in semantic cache: '{query}' "
-                f"[provider: {active_provider}]"
+                "Stored query in semantic cache: '%s' [provider: %s]",
+                query,
+                active_provider,
             )
         except Exception as e:
-            logger.error(f"Failed to update semantic cache: {e}", exc_info=True)
+            logger.error("Failed to update semantic cache: %s", e, exc_info=True)
 
     def clear(self):
         """Clear all cached entries."""
@@ -130,7 +145,7 @@ class SemanticCacheService:
             )
             logger.info("Semantic cache cleared successfully.")
         except Exception as e:
-            logger.error(f"Failed to clear semantic cache: {e}", exc_info=True)
+            logger.error("Failed to clear semantic cache: %s", e, exc_info=True)
 
 
 # ── Lazy singleton ──────────────────────────────────────────────────────

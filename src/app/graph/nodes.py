@@ -39,7 +39,7 @@ def retrieve_node(state: AgentState) -> dict[str, Any]:
         docs = vs.search(question)
         return {"documents": docs, "question": question, "steps": steps}
     except Exception as e:
-        logger.error(f"Retrieve node failed: {e}", exc_info=True)
+        logger.error("Retrieve node failed: %s", e, exc_info=True)
         return {
             "documents": [],
             "question": question,
@@ -98,7 +98,7 @@ def grade_documents_node(state: AgentState) -> dict[str, Any]:
 
         return {"documents": filtered_docs, "question": question, "steps": steps}
     except Exception as e:
-        logger.error(f"Grade documents node failed: {e}", exc_info=True)
+        logger.error("Grade documents node failed: %s", e, exc_info=True)
         return {
             "documents": [],
             "question": question,
@@ -138,7 +138,7 @@ def generate_node(state: AgentState) -> dict[str, Any]:
             "steps": steps,
         }
     except Exception as e:
-        logger.error(f"Generate node failed: {e}", exc_info=True)
+        logger.error("Generate node failed: %s", e, exc_info=True)
         return {
             "documents": documents,
             "question": question,
@@ -181,7 +181,7 @@ def direct_response_node(state: AgentState) -> dict[str, Any]:
             "steps": steps,
         }
     except Exception as e:
-        logger.error(f"Direct response node failed: {e}", exc_info=True)
+        logger.error("Direct response node failed: %s", e, exc_info=True)
         return {
             "question": question,
             "generation": (
@@ -243,7 +243,7 @@ def rewrite_query_node(state: AgentState) -> dict[str, Any]:
             "steps": steps,
         }
     except Exception as e:
-        logger.error(f"Rewrite query node failed: {e}", exc_info=True)
+        logger.error("Rewrite query node failed: %s", e, exc_info=True)
         return {
             "documents": state["documents"],
             "question": question,

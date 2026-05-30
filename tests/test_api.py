@@ -9,10 +9,13 @@ client = TestClient(app)
 
 
 def test_health_check():
-    """Health endpoint returns 200 OK."""
+    """Health endpoint returns 200 OK with system status."""
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "chromadb" in data
+    assert "model" in data
 
 
 def test_chat_rag_path():

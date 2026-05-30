@@ -91,8 +91,7 @@ async def chat_endpoint(
         # Update cache if enabled
         if settings.enable_semantic_cache:
             serialized_sources = [
-                {"content": src.content, "metadata": src.metadata}
-                for src in sources
+                {"content": src.content, "metadata": src.metadata} for src in sources
             ]
             get_semantic_cache().update(
                 query=payload.query,
