@@ -43,8 +43,10 @@ class SemanticCacheService:
             try:
                 active_provider = provider or settings.llm_provider
                 filter_dict = {
-                    "provider": active_provider,
-                    "tenant_id": tenant_id or "default",
+                    "$and": [
+                        {"provider": active_provider},
+                        {"tenant_id": tenant_id or "default"},
+                    ]
                 }
 
                 results = self.vector_store.similarity_search_with_score(
