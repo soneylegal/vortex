@@ -30,7 +30,7 @@ class RouteDecision(BaseModel):
     )
 
 
-def router_node(state: AgentState) -> dict[str, Any]:
+async def router_node(state: AgentState) -> dict[str, Any]:
     """
     Classify the user query as needing document retrieval or a direct LLM response.
 
@@ -68,12 +68,16 @@ def router_node(state: AgentState) -> dict[str, Any]:
         )
 
         chain = prompt | structured_llm
-        result = chain.invoke({"question": question})
+        result = await chain.ainvoke({"question": question})
 
         return {
             "question": question,
             "route": result.route,  # type: ignore[union-attr]
             "steps": steps,
+            "retry_count": 0,
+            "documents": [],
+            "error": None,
+            "generation": "",
         }
     except Exception as e:
         logger.error("Router node failed: %s", e, exc_info=True)
@@ -82,4 +86,7 @@ def router_node(state: AgentState) -> dict[str, Any]:
             "route": "fallback",
             "error": str(e),
             "steps": steps,
+            "retry_count": 0,
+            "documents": [],
+            "generation": "",
         }
