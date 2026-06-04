@@ -1,6 +1,9 @@
+import json
 import logging
+import uuid
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from langgraph.graph.state import CompiledStateGraph
 
 from src.app.core.config import settings
@@ -50,9 +53,9 @@ async def chat_endpoint(
     elif x_api_key:
         api_key = x_api_key
 
-    # Check semantic cache if enabled
-    if settings.enable_semantic_cache:
-        cached = get_semantic_cache().lookup(payload.query, provider=provider)
+    # Check semantic cache if enabled and this is a single-turn request (no session_id)
+    if settings.enable_semantic_cache and not payload.session_id:
+        cached = get_semantic_cache().lookup(payload.query, provider=provider, tenant_id=payload.tenant_id)
         if cached:
             sources = [
                 SourceDocument(content=src["content"], metadata=src["metadata"])
@@ -70,26 +73,26 @@ async def chat_endpoint(
             )
 
     try:
+        # Generate session ID if not provided for checkpoint isolation
+        session_id = payload.session_id or f"transient-{uuid.uuid4()}"
+        config = {"configurable": {"thread_id": session_id}}
+
         initial_state = {
             "question": payload.query,
-            "generation": "",
-            "documents": [],
-            "steps": ["received_query"],
-            "route": "",
-            "retry_count": 0,
             "api_key": api_key,
             "provider": provider,
+            "tenant_id": payload.tenant_id,
         }
 
-        result = await workflow.ainvoke(initial_state)
+        result = await workflow.ainvoke(initial_state, config=config)
 
         sources = [
             SourceDocument(content=doc.page_content, metadata=doc.metadata)
             for doc in result.get("documents", [])
         ]
 
-        # Update cache if enabled
-        if settings.enable_semantic_cache:
+        # Update cache if enabled and this is a single-turn request
+        if settings.enable_semantic_cache and not payload.session_id:
             serialized_sources = [
                 {"content": src.content, "metadata": src.metadata} for src in sources
             ]
@@ -100,6 +103,7 @@ async def chat_endpoint(
                 steps=result.get("steps", []),
                 route=result.get("route"),
                 provider=provider,
+                tenant_id=payload.tenant_id,
             )
 
         return ChatResponse(
@@ -111,3 +115,78 @@ async def chat_endpoint(
     except Exception as e:
         logger.error("Workflow execution failed", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/chat/stream")
+@limiter.limit("10/minute")
+async def chat_stream_endpoint(
+    request: Request,
+    payload: ChatRequest,
+    workflow: CompiledStateGraph = Depends(get_agent_workflow),
+    authorization: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None),
+    x_provider: str | None = Header(default=None),
+):
+    """
+    Submit a question to the Vortex workflow and stream the response token-by-token via SSE.
+    """
+    provider = x_provider.lower() if x_provider else None
+    if provider and provider not in ["gemini", "anthropic", "ollama"]:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Unsupported LLM provider: {x_provider}. "
+                "Supported providers: gemini, anthropic, ollama"
+            ),
+        )
+
+    api_key = None
+    if authorization:
+        if authorization.startswith("Bearer "):
+            api_key = authorization[7:]
+        else:
+            api_key = authorization
+    elif x_api_key:
+        api_key = x_api_key
+
+    # Generate session ID if not provided for checkpoint isolation
+    session_id = payload.session_id or f"transient-{uuid.uuid4()}"
+    config = {"configurable": {"thread_id": session_id}}
+
+    initial_state = {
+        "question": payload.query,
+        "api_key": api_key,
+        "provider": provider,
+        "tenant_id": payload.tenant_id,
+    }
+
+    async def event_generator():
+        try:
+            final_state = {}
+            async for event in workflow.astream_events(
+                initial_state, config=config, version="v2"
+            ):
+                kind = event["event"]
+
+                # 1. Yield stream tokens from the generation step
+                if kind == "on_chat_model_stream" and "generate_answer" in event.get("tags", []):
+                    chunk = event["data"].get("chunk")
+                    if chunk and hasattr(chunk, "content") and chunk.content:
+                        yield f"data: {json.dumps({'event': 'token', 'text': chunk.content})}\n\n"
+
+                # 2. Capture final state
+                elif kind == "on_chain_end" and event.get("name") == "LangGraph":
+                    final_state = event["data"].get("output", {})
+
+            # 3. Yield metadata payload at completion
+            sources = [
+                {"content": doc.page_content, "metadata": doc.metadata}
+                for doc in final_state.get("documents", [])
+            ]
+            yield f"data: {json.dumps({\n                'event': 'metadata',\n                'sources': sources,\n                'steps': final_state.get('steps', []),\n                'route': final_state.get('route', ''),\n            })}\n\n"
+
+        except Exception as err:
+            logger.error("Error during streaming generation", exc_info=True)
+            yield f"data: {json.dumps({'event': 'error', 'text': str(err)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
