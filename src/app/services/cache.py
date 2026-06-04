@@ -34,7 +34,7 @@ class SemanticCacheService:
         )
         self.distance_threshold = settings.semantic_cache_threshold
 
-    def lookup(self, query: str, provider: str | None = None) -> dict | None:
+    def lookup(self, query: str, provider: str | None = None, tenant_id: str | None = None) -> dict | None:
         """
         Lookup a query in the cache. Matches semantically similar queries
         with cosine distance below the configured threshold.
@@ -42,7 +42,10 @@ class SemanticCacheService:
         with CacheTimer() as timer:
             try:
                 active_provider = provider or settings.llm_provider
-                filter_dict = {"provider": active_provider}
+                filter_dict = {
+                    "provider": active_provider,
+                    "tenant_id": tenant_id or "default",
+                }
 
                 results = self.vector_store.similarity_search_with_score(
                     query, k=1, filter=filter_dict
@@ -110,6 +113,7 @@ class SemanticCacheService:
         steps: list,
         route: str | None,
         provider: str | None = None,
+        tenant_id: str | None = None,
     ):
         """Store a successful query-response pair in the semantic cache."""
         try:
@@ -122,13 +126,15 @@ class SemanticCacheService:
                     "steps": json.dumps(steps),
                     "route": route or "",
                     "provider": active_provider,
+                    "tenant_id": tenant_id or "default",
                 },
             )
             self.vector_store.add_documents([doc])
             logger.info(
-                "Stored query in semantic cache: '%s' [provider: %s]",
+                "Stored query in semantic cache: '%s' [provider: %s, tenant: %s]",
                 query,
                 active_provider,
+                tenant_id or "default",
             )
         except Exception as e:
             logger.error("Failed to update semantic cache: %s", e, exc_info=True)
