@@ -29,6 +29,7 @@ dependencies = [
     "opentelemetry-exporter-otlp>=1.25.0",
     "slowapi>=0.1.9",
     "python-json-logger>=2.0.0",
+    "pypdf>=4.0.0",
 ]
 
 [project.optional-dependencies]
