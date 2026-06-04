@@ -5,7 +5,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from src.app.api.v1 import chat
+from src.app.api.v1 import chat, documents
 from src.app.core.config import settings
 from src.app.core.exceptions import (
     BaseAPIException,
@@ -121,3 +121,4 @@ async def metrics_endpoint():
 
 # Register Routers
 app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
+app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
