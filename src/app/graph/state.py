@@ -27,3 +27,6 @@ class AgentState(TypedDict):
     api_key: NotRequired[str | None]
     provider: NotRequired[str | None]
     error: NotRequired[str | None]
+    tenant_id: NotRequired[str | None]
+    history: NotRequired[list[dict[str, str]] | None]
+
