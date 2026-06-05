@@ -2,7 +2,64 @@
 
 
 
+## v0.5.0 (2026-06-05)
+
+### Chore
+
+* chore: add python-multipart to dependencies ([`d563b5e`](https://github.com/soneylegal/vortex/commit/d563b5eeb84c5376788aa4ab2e59ab5993ab5bbf))
+
+* chore: add langchain-text-splitters explicitly to dependencies ([`8aedfd0`](https://github.com/soneylegal/vortex/commit/8aedfd0d352e23ad3d2bf5b7dd2806b35394df86))
+
+* chore: add docker targets to Makefile for unified verification inside container ([`bfde717`](https://github.com/soneylegal/vortex/commit/bfde717b85a47496a5d2f534920eb1fcf49ead2b))
+
+* chore: implement multi-stage Docker build targeting development stage ([`3a9c8e0`](https://github.com/soneylegal/vortex/commit/3a9c8e0acd241e16d490219b0c42572ab60ba41b))
+
+* chore: add pypdf dependency for PDF document support ([`5bc1d13`](https://github.com/soneylegal/vortex/commit/5bc1d1329112a314d0de5ea269374c14d873b1a6))
+
+### Documentation
+
+* docs: update developer guide and readme, fix style formatting, mypy types and mock embeddings ([`bc70d7d`](https://github.com/soneylegal/vortex/commit/bc70d7d591b3f3adc1d0bd9ac975d80791aec000))
+
+### Feature
+
+* feat: register documents router in main.py ([`a61ddf1`](https://github.com/soneylegal/vortex/commit/a61ddf1da7dbd01ef5ecb7102a0ffba0b601c312))
+
+* feat: add api/v1/documents endpoint supporting markdown and PDF upload and ingestion ([`ac8c7d1`](https://github.com/soneylegal/vortex/commit/ac8c7d131394ceb31f469fdefa9d79fe357a4633))
+
+* feat: add post chat/stream sse endpoint and support session checkpointers and cache bypassing ([`4cfe694`](https://github.com/soneylegal/vortex/commit/4cfe694e18cca197e28f0052ed27ace54b1c973c))
+
+* feat: add tenant_id and session_id to ChatRequest schema and add DocumentUploadResponse ([`44a0c37`](https://github.com/soneylegal/vortex/commit/44a0c3765695f9fddf7f97d872e2995ad2b4de51))
+
+* feat: refactor all graph nodes to be async with history support and tag tracking ([`e5b26e6`](https://github.com/soneylegal/vortex/commit/e5b26e61afbd2bb8061cc653560b2609fc2319b4))
+
+* feat: isolate semantic cache lookup and updates by tenant_id ([`a0eec09`](https://github.com/soneylegal/vortex/commit/a0eec09d20ee9a1071449cc09431c7c3824ea9be))
+
+* feat: partition VectorStoreService by tenant using dynamic collections ([`0916ade`](https://github.com/soneylegal/vortex/commit/0916adea2c1c58f14d58b055e2d7ebe7233c61ed))
+
+* feat: compile StateGraph with MemorySaver and update AgentState with history and tenant_id ([`84c268f`](https://github.com/soneylegal/vortex/commit/84c268fa4a3d02882566abbe6e1e60aa22053c38))
+
+### Test
+
+* test: use real Document in chaos generation test for serialization ([`138e71c`](https://github.com/soneylegal/vortex/commit/138e71cca0f9e5b58e113a8ce7661cd87195c580))
+
+* test: align chaos tests with async workflow changes ([`4a50ed6`](https://github.com/soneylegal/vortex/commit/4a50ed6a62b97a081e2a35e8b0679beb2ae052f8))
+
+* test: refactor fallback test to be async ([`2b33ca7`](https://github.com/soneylegal/vortex/commit/2b33ca7a14d833be4d99486299a6fdedfdc20a27))
+
+* test: add test suite v0.5.0 and fix semantic cache lookup filters ([`b6d4cfd`](https://github.com/soneylegal/vortex/commit/b6d4cfde3eed802a8a7584a885b8dec3cfcf384d))
+
+### Unknown
+
+* Merge pull request #1 from soneylegal/feat/v0.5.0-streaming-tenancy
+
+Feat/v0.5.0 streaming tenancy ([`fa7fc22`](https://github.com/soneylegal/vortex/commit/fa7fc223427507f04c5eefe694e57f68e3b02ddd))
+
+
 ## v0.4.0 (2026-05-30)
+
+### Chore
+
+* chore(release): v0.4.0 [skip ci] ([`5906ab4`](https://github.com/soneylegal/vortex/commit/5906ab42756b66e96e930b208ba25dfbdf15e060))
 
 ### Documentation
 
