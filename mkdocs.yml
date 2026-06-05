@@ -2,6 +2,7 @@ site_name: Vortex
 site_description: Production-grade Agentic RAG Orchestrator for Technical Support
 site_author: Davi Laurindo
 site_url: https://soneylegal.github.io/vortex/
+dev_addr: "127.0.0.1:8001"
 
 theme:
   name: material

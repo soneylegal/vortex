@@ -60,8 +60,11 @@ graph TD
 ## 🚀 Key Features
 
 *   **Self-Corrective RAG (CRAG)**: LangGraph state machine dynamically grades retrieved documentation relevance, filters out noise, and initiates rewrite loops for failed queries.
+*   **Real-time SSE Streaming**: High-performance Server-Sent Events (SSE) streaming API (`POST /api/v1/chat/stream`) yielding token-by-token generation chunks and final structured references.
+*   **Multi-Tenant Isolation**: Physical namespace partitioning for ChromaDB collections (`vortex_kb_{tenant_id}`) and dynamic cache lookup isolating tenant context.
+*   **In-Memory Ingestion API**: Endpoint (`POST /api/v1/documents`) supporting hot-loading of `.md` and `.pdf` files directly into tenant vector stores.
 *   **Bring Your Own Key (BYOK)**: Supports dynamic, request-level API credentials and provider routing via HTTP headers (`Authorization`, `X-API-Key`, `X-Provider`).
-*   **Zero-Cost Local Semantic Cache**: Persistent ChromaDB-backed similarity cache using a shared local Sentence-Transformers embeddings model. It features provider-level partition isolation to avoid cross-provider context leaks.
+*   **Zero-Cost Local Semantic Cache**: Persistent ChromaDB-backed similarity cache using a shared local Sentence-Transformers embeddings model. It features provider-level and tenant-level partition isolation to avoid context leaks.
 *   **Chaos Engineering Resilience**: Complete exception shielding across all graph nodes (ChromaDB down, LLM timeouts, grading exceptions) with fast-bypass routing to fallbacks, guaranteeing zero HTTP 500 crashes.
 *   **Model-Agnostic Engine**: Native support for Google Gemini, Anthropic Claude, and local Ollama models with seamless environment-level fallback.
 *   **Observability**: Integrated OpenTelemetry/OpenInference telemetry compatible with Arize Phoenix for step-by-step agent execution tracing.
@@ -84,78 +87,56 @@ graph TD
 
 ## 📖 Live Documentation Portal
 
-Vortex includes a fully-featured documentation portal built with **MkDocs-Material**. To view the complete architectural guides, step-by-step setups, caching metrics, and API design specifications:
+Vortex includes a fully-featured documentation portal built with **MkDocs-Material**:
 
 ```bash
-# Run local live-reload documentation server
-mkdocs serve
+make docs          # Local live-reload server (requires venv)
+make docker-docs   # Serve docs inside Docker container
 ```
-Then visit [http://localhost:8000](http://localhost:8000) in your browser.
+Then visit [http://localhost:8001](http://localhost:8001) in your browser.
 
 ---
 
 ## 🏁 Quick Start
 
-### 1. Installation
-Clone the repository and install the development dependencies in editable mode:
-
 ```bash
+# 1. Clone and configure
 git clone https://github.com/soneylegal/vortex.git
 cd vortex
+cp .env.example .env   # Fill in your LLM API keys
 
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# Install requirements
-pip install -e ".[dev]"
-```
-
-### 2. Configuration
-Copy the configuration template and fill in your model API credentials:
-```bash
-cp .env.example .env
-```
-
-### 3. Ingest Documentation
-Incorporate the Cortex serverless data pipeline and Sentinel monitoring manuals into the vector database:
-```bash
-make ingest
-```
-
-### 4. Run the API Server
-Start the FastAPI server:
-```bash
-make run
+# 2. Start the full stack
+docker compose up -d
 ```
 *   **API Endpoint**: `http://localhost:8000`
 *   **Interactive Swagger UI**: `http://localhost:8000/docs`
+*   **Phoenix Tracing Dashboard**: `http://localhost:6006`
+
+> For local development without Docker (venv, pip install, manual server), see the [Developer Guide](docs/developer-guide.md).
 
 ---
 
 ## 🧪 Development & Quality Checks
 
-Maintain repository standards by executing the local check suite before committing changes:
+Maintain repository standards by executing the check suite:
 
+### Local Quality Tools
 ```bash
 make lint        # Run Ruff code linter
-make format      # Run Ruff code formatter check
+make format      # Run Ruff code formatter and check
 make typecheck   # Run Mypy static type verification
-make test        # Run Pytest suite (including chaos and caching tests)
+make test        # Run Pytest suite
 make ci          # Run all linting, typechecking, and tests in one command
 ```
 
----
-
-## 🐳 Docker Compose (With Observability Stack)
-
-Spin up the entire stack including the API and the Arize Phoenix tracing UI:
-
+### 🐳 Docker Quality Tools
 ```bash
-docker compose up -d
+make docker-lint        # Lint inside container
+make docker-format      # Format inside container
+make docker-typecheck   # Typecheck inside container
+make docker-test        # Run tests inside container
+make docker-ci          # Run all linting, typechecking, and tests inside container
 ```
-*   **API Portal**: `http://localhost:8000`
-*   **Phoenix Dashboard**: `http://localhost:6006`
 
 ---
 

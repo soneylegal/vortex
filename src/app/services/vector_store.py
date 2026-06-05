@@ -15,35 +15,43 @@ class VectorStoreService:
             model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
         self.persist_directory = settings.chroma_persist_directory
-
-        # Initialize the Chroma DB
         os.makedirs(self.persist_directory, exist_ok=True)
-        self.vector_store = Chroma(
-            collection_name="vortex_kb",
-            embedding_function=self.embeddings,
-            persist_directory=self.persist_directory,
-        )
+        self._collections: dict[str, Chroma] = {}
 
-    def search(self, query: str, k: int = 4) -> list[Document]:
+    def _get_collection(self, tenant_id: str | None = None) -> Chroma:
+        collection_name = f"vortex_kb_{tenant_id}" if tenant_id else "vortex_kb"
+        if collection_name not in self._collections:
+            self._collections[collection_name] = Chroma(
+                collection_name=collection_name,
+                embedding_function=self.embeddings,
+                persist_directory=self.persist_directory,
+            )
+        return self._collections[collection_name]
+
+    def search(
+        self, query: str, k: int = 4, tenant_id: str | None = None
+    ) -> list[Document]:
         """Search the vector store for relevant documents."""
-        return self.vector_store.similarity_search(query, k=k)
+        db = self._get_collection(tenant_id)
+        return db.similarity_search(query, k=k)
 
-    def add_documents(self, documents: list[Document]):
+    def add_documents(self, documents: list[Document], tenant_id: str | None = None):
         """Add documents to the vector store."""
-        self.vector_store.add_documents(documents)
+        db = self._get_collection(tenant_id)
+        db.add_documents(documents)
 
-    def document_count(self) -> int:
+    def document_count(self, tenant_id: str | None = None) -> int:
         """Return the total number of documents in the collection."""
-        return self.vector_store._collection.count()
+        db = self._get_collection(tenant_id)
+        return db._collection.count()
 
-    def clear(self):
+    def clear(self, tenant_id: str | None = None):
         """Delete all documents from the collection and re-initialize."""
-        self.vector_store.delete_collection()
-        self.vector_store = Chroma(
-            collection_name="vortex_kb",
-            embedding_function=self.embeddings,
-            persist_directory=self.persist_directory,
-        )
+        db = self._get_collection(tenant_id)
+        db.delete_collection()
+        collection_name = f"vortex_kb_{tenant_id}" if tenant_id else "vortex_kb"
+        if collection_name in self._collections:
+            del self._collections[collection_name]
 
 
 # ── Lazy singleton ──────────────────────────────────────────────────────

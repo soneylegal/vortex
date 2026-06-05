@@ -14,6 +14,7 @@ Graph topology:
     rewrite_query ──[retries >= max]─→ fallback → END
 """
 
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
 from src.app.core.config import settings
@@ -122,4 +123,4 @@ def get_workflow():
     workflow.add_edge("direct_response", END)
     workflow.add_edge("fallback", END)
 
-    return workflow.compile()
+    return workflow.compile(checkpointer=MemorySaver())

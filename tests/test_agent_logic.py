@@ -105,7 +105,7 @@ class TestCheckRetryLimit:
 
 
 class TestFallbackNode:
-    def test_fallback_produces_message(self):
+    async def test_fallback_produces_message(self):
         """Fallback node should return a helpful 'not found' message."""
         from src.app.graph.nodes import fallback_node
 
@@ -117,7 +117,7 @@ class TestFallbackNode:
             "route": "retrieve",
             "retry_count": 2,
         }
-        result = fallback_node(state)
+        result = await fallback_node(state)
         assert "knowledge base" in result["generation"].lower()
         assert result["documents"] == []
         assert "fallback" in result["steps"]

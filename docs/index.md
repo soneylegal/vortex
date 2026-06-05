@@ -8,25 +8,29 @@ Vortex is engineered to resolve complex customer queries for the *Cortex* server
 
 ## 🚀 Key Architectural Highlights
 
-*   **Bring Your Own Key (BYOK)**: Empowers clients with request-level dynamic API credentials and seamless fallback options.
-*   **Multi-Provider Flexibility**: Native compatibility with top-tier foundation models (Google Gemini, Anthropic Claude, and local Ollama nodes).
-*   **Zero-Cost Local Stack**: Complete development environment running locally with ChromaDB and HuggingFace Sentence-Transformers.
-*   **Semantic Caching Layer**: Ultra-fast cosine-similarity cache partitioned by LLM provider to bypass expensive LLM token calls.
-*   **Chaos Engineering Resilience**: Built-in exception shielding on graph nodes and state transitions to survive backend service outages.
-*   **Modern Observability**: Full instrumentation via OpenInference and OpenTelemetry (compatible with Arize Phoenix).
+*   **Self-Corrective RAG (CRAG)**: LangGraph state machine dynamically grades retrieved documentation relevance, filters out noise, and initiates rewrite loops for failed queries.
+*   **Real-time SSE Streaming**: High-performance Server-Sent Events (SSE) streaming API (`POST /api/v1/chat/stream`) yielding token-by-token generation chunks and final structured references.
+*   **Multi-Tenant Isolation**: Physical namespace partitioning for ChromaDB collections (`vortex_kb_{tenant_id}`) and dynamic cache lookup isolating tenant context.
+*   **In-Memory Ingestion API**: Endpoint (`POST /api/v1/documents`) supporting hot-loading of `.md` and `.pdf` files directly into tenant vector stores.
+*   **Bring Your Own Key (BYOK)**: Supports dynamic, request-level API credentials and provider routing via HTTP headers (`Authorization`, `X-API-Key`, `X-Provider`).
+*   **Zero-Cost Local Semantic Cache**: Persistent ChromaDB-backed similarity cache using a shared local Sentence-Transformers embeddings model. It features provider-level and tenant-level partition isolation to avoid context leaks.
+*   **Chaos Engineering Resilience**: Complete exception shielding across all graph nodes (ChromaDB down, LLM timeouts, grading exceptions) with fast-bypass routing to fallbacks, guaranteeing zero HTTP 500 crashes.
+*   **Model-Agnostic Engine**: Native support for Google Gemini, Anthropic Claude, and local Ollama models with seamless environment-level fallback.
+*   **Observability**: Integrated OpenTelemetry/OpenInference telemetry compatible with Arize Phoenix for step-by-step agent execution tracing.
 
 ---
 
 ## 🛠️ Technology Stack
 
-Vortex is built with modern, industry-standard technologies:
-
-*   **Orchestration**: [LangGraph](https://github.com/langchain-ai/langgraph) / [LangChain](https://github.com/langchain-ai/langchain)
-*   **API Framework**: [FastAPI](https://fastapi.tiangolo.com/) (Python 3.12+)
-*   **Vector Database**: [ChromaDB](https://www.trychroma.com/) (Local persistent storage)
-*   **Embeddings Model**: Local `sentence-transformers/all-MiniLM-L6-v2` via HuggingFace
-*   **Build System**: [Hatchling](https://hatch.pypa.io/) & [pip]
-*   **CI/CD & Release**: Python Semantic Release on GitHub Actions
+| Layer | Technology | Description |
+| :--- | :--- | :--- |
+| **Runtime** | Python 3.12 / 3.13 / 3.14 | High-performance async runtime |
+| **Web Framework** | FastAPI (AsyncIO) | ASGI web server for fast API delivery |
+| **Agent Engine** | LangGraph & LangChain | Stateful multi-actor graph orchestration |
+| **Vector Store** | ChromaDB (Embedded) | Persistent vector index for local documents |
+| **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` | CPU-friendly embeddings for zero cost |
+| **Observability** | OpenTelemetry + Arize Phoenix | Distributed tracing and LLM evaluation |
+| **Build & Tooling** | Hatchling, Ruff, Mypy, pytest | Standardized modern Python developer experience |
 
 ---
 

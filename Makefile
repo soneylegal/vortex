@@ -1,4 +1,4 @@
-.PHONY: install test lint format run ingest ci docker clean
+.PHONY: install test lint format run ingest ci docker clean docker-lint docker-format docker-typecheck docker-test docker-ci docs docker-docs
 
 # ── Development ─────────────────────────────────────────────────────────
 
@@ -42,6 +42,30 @@ up:
 
 down:
 	docker compose down
+
+docker-lint:
+	docker compose run --rm api ruff check .
+
+docker-format:
+	docker compose run --rm api ruff format .
+	docker compose run --rm api ruff check --fix .
+
+docker-typecheck:
+	docker compose run --rm api mypy src/ --ignore-missing-imports
+
+docker-test:
+	docker compose run --rm api pytest tests/ -v
+
+docker-ci: docker-lint docker-typecheck docker-test
+	@echo "✓ All Docker CI checks passed."
+
+# ── Documentation ───────────────────────────────────────────────────────
+
+docs:
+	mkdocs serve
+
+docker-docs:
+	docker compose run --rm -p 8001:8001 api mkdocs serve -a 0.0.0.0:8001
 
 # ── Cleanup ─────────────────────────────────────────────────────────────
 

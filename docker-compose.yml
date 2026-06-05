@@ -1,15 +1,16 @@
-version: '3.8'
-
 services:
   api:
     build:
       context: .
       dockerfile: Dockerfile
+      target: development
     ports:
       - "8000:8000"
     volumes:
       - ./src:/app/src
       - ./data:/app/data
+      - ./tests:/app/tests
+      - ./pyproject.toml:/app/pyproject.toml
     env_file:
       - .env
     environment:

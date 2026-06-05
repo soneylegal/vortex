@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.documents import Document
@@ -29,10 +29,12 @@ async def test_validation_successful_rag_path():
     # 1. Mock router to route to 'retrieve'
     mock_router_decision = MagicMock()
     mock_router_decision.route = "retrieve"
+
     mock_router_llm = MagicMock()
-    mock_router_llm.with_structured_output.return_value = mock_router_llm
-    mock_router_llm.invoke.return_value = mock_router_decision
-    mock_router_llm.return_value = mock_router_decision
+    mock_structured_router = AsyncMock()
+    mock_structured_router.return_value = mock_router_decision
+    mock_structured_router.ainvoke.return_value = mock_router_decision
+    mock_router_llm.with_structured_output.return_value = mock_structured_router
 
     # 2. Mock Vector Store to return a relevant document
     mock_vs = MagicMock()
@@ -45,17 +47,19 @@ async def test_validation_successful_rag_path():
     # 3. Mock Grader LLM to grade document as 'yes' (relevant)
     mock_grade = MagicMock()
     mock_grade.binary_score = "yes"
+
     mock_grader_llm = MagicMock()
-    mock_grader_llm.with_structured_output.return_value = mock_grader_llm
-    mock_grader_llm.invoke.return_value = mock_grade
-    mock_grader_llm.return_value = mock_grade
+    mock_structured_grader = AsyncMock()
+    mock_structured_grader.return_value = mock_grade
+    mock_structured_grader.ainvoke.return_value = mock_grade
+    mock_grader_llm.with_structured_output.return_value = mock_structured_grader
 
     # 4. Mock Generator LLM to return generation answer
     mock_gen_response = MagicMock()
     mock_gen_response.content = "To fix Cortex Error 503, increase concurrency limits."
-    mock_gen_llm = MagicMock()
-    mock_gen_llm.invoke.return_value = mock_gen_response
+    mock_gen_llm = AsyncMock()
     mock_gen_llm.return_value = mock_gen_response
+    mock_gen_llm.ainvoke.return_value = mock_gen_response
 
     with (
         patch("src.app.graph.router.get_llm", return_value=mock_router_llm),
@@ -74,7 +78,8 @@ async def test_validation_successful_rag_path():
             "retry_count": 0,
         }
 
-        result = await workflow.ainvoke(initial_state)
+        config = {"configurable": {"thread_id": "test_thread_rag"}}
+        result = await workflow.ainvoke(initial_state, config=config)
 
         # Assert full path: router -> retrieve -> grade -> generate
         assert "router" in result["steps"]
@@ -103,10 +108,12 @@ async def test_validation_correction_rewrite_loop():
     # 1. Mock router to route to 'retrieve'
     mock_router_decision = MagicMock()
     mock_router_decision.route = "retrieve"
+
     mock_router_llm = MagicMock()
-    mock_router_llm.with_structured_output.return_value = mock_router_llm
-    mock_router_llm.invoke.return_value = mock_router_decision
-    mock_router_llm.return_value = mock_router_decision
+    mock_structured_router = AsyncMock()
+    mock_structured_router.return_value = mock_router_decision
+    mock_structured_router.ainvoke.return_value = mock_router_decision
+    mock_router_llm.with_structured_output.return_value = mock_structured_router
 
     # 2. Mock Vector Store to return document
     mock_vs = MagicMock()
@@ -117,7 +124,6 @@ async def test_validation_correction_rewrite_loop():
         page_content="Sentinel restart details.",
         metadata={"source": "sentinel_manual.md"},
     )
-    # Search is called twice: first returns irrelevant, second returns relevant
     mock_vs.search.side_effect = [[mock_doc_irrelevant], [mock_doc_relevant]]
 
     # 3. Mock Grader LLM (returns 'no' first, then 'yes')
@@ -125,40 +131,38 @@ async def test_validation_correction_rewrite_loop():
     mock_grade_no.binary_score = "no"
     mock_grade_yes = MagicMock()
     mock_grade_yes.binary_score = "yes"
+
     mock_grader_llm1 = MagicMock()
-    mock_grader_llm1.with_structured_output.return_value = mock_grader_llm1
-    mock_grader_llm1.invoke.return_value = mock_grade_no
-    mock_grader_llm1.return_value = mock_grade_no
+    mock_structured_grader1 = AsyncMock()
+    mock_structured_grader1.return_value = mock_grade_no
+    mock_structured_grader1.ainvoke.return_value = mock_grade_no
+    mock_grader_llm1.with_structured_output.return_value = mock_structured_grader1
 
     mock_grader_llm2 = MagicMock()
-    mock_grader_llm2.with_structured_output.return_value = mock_grader_llm2
-    mock_grader_llm2.invoke.return_value = mock_grade_yes
-    mock_grader_llm2.return_value = mock_grade_yes
+    mock_structured_grader2 = AsyncMock()
+    mock_structured_grader2.return_value = mock_grade_yes
+    mock_structured_grader2.ainvoke.return_value = mock_grade_yes
+    mock_grader_llm2.with_structured_output.return_value = mock_structured_grader2
 
     # 4. Mock Rewrite LLM
     mock_rewritten_query = MagicMock()
     mock_rewritten_query.content = "rewritten query"
-    mock_rewrite_llm = MagicMock()
-    mock_rewrite_llm.invoke.return_value = mock_rewritten_query
+    mock_rewrite_llm = AsyncMock()
     mock_rewrite_llm.return_value = mock_rewritten_query
+    mock_rewrite_llm.ainvoke.return_value = mock_rewritten_query
 
     # 5. Mock Generator LLM
     mock_gen_response = MagicMock()
     mock_gen_response.content = "Restart Sentinel."
-    mock_gen_llm = MagicMock()
-    mock_gen_llm.invoke.return_value = mock_gen_response
+    mock_gen_llm = AsyncMock()
     mock_gen_llm.return_value = mock_gen_response
+    mock_gen_llm.ainvoke.return_value = mock_gen_response
 
     with (
         patch("src.app.graph.router.get_llm", return_value=mock_router_llm),
         patch("src.app.graph.nodes.get_vector_store", return_value=mock_vs),
         patch("src.app.graph.nodes.get_llm") as mock_get_llm,
     ):
-        # Sequence of get_llm calls inside nodes:
-        # 1. grade_documents (mock_grader_llm1)
-        # 2. rewrite_query (mock_rewrite_llm)
-        # 3. grade_documents (mock_grader_llm2)
-        # 4. generate (mock_gen_llm)
         mock_get_llm.side_effect = [
             mock_grader_llm1,
             mock_rewrite_llm,
@@ -176,7 +180,8 @@ async def test_validation_correction_rewrite_loop():
             "retry_count": 0,
         }
 
-        result = await workflow.ainvoke(initial_state)
+        config = {"configurable": {"thread_id": "test_thread_rewrite"}}
+        result = await workflow.ainvoke(initial_state, config=config)
 
         # Assert full path:
         # router -> retrieve -> grade -> rewrite -> retrieve -> grade -> generate
