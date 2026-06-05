@@ -29,4 +29,3 @@ class AgentState(TypedDict):
     error: NotRequired[str | None]
     tenant_id: NotRequired[str | None]
     history: NotRequired[list[dict[str, str]] | None]
-

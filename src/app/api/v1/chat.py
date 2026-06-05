@@ -1,9 +1,11 @@
 import json
 import logging
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
 
 from src.app.core.config import settings
@@ -55,7 +57,9 @@ async def chat_endpoint(
 
     # Check semantic cache if enabled and this is a single-turn request (no session_id)
     if settings.enable_semantic_cache and not payload.session_id:
-        cached = get_semantic_cache().lookup(payload.query, provider=provider, tenant_id=payload.tenant_id)
+        cached = get_semantic_cache().lookup(
+            payload.query, provider=provider, tenant_id=payload.tenant_id
+        )
         if cached:
             sources = [
                 SourceDocument(content=src["content"], metadata=src["metadata"])
@@ -75,9 +79,9 @@ async def chat_endpoint(
     try:
         # Generate session ID if not provided for checkpoint isolation
         session_id = payload.session_id or f"transient-{uuid.uuid4()}"
-        config = {"configurable": {"thread_id": session_id}}
+        config: RunnableConfig = {"configurable": {"thread_id": session_id}}
 
-        initial_state = {
+        initial_state: dict[str, Any] = {
             "question": payload.query,
             "api_key": api_key,
             "provider": provider,
@@ -128,7 +132,8 @@ async def chat_stream_endpoint(
     x_provider: str | None = Header(default=None),
 ):
     """
-    Submit a question to the Vortex workflow and stream the response token-by-token via SSE.
+    Submit a question to the Vortex workflow and stream the response
+    token-by-token via SSE.
     """
     provider = x_provider.lower() if x_provider else None
     if provider and provider not in ["gemini", "anthropic", "ollama"]:
@@ -151,9 +156,9 @@ async def chat_stream_endpoint(
 
     # Generate session ID if not provided for checkpoint isolation
     session_id = payload.session_id or f"transient-{uuid.uuid4()}"
-    config = {"configurable": {"thread_id": session_id}}
+    config: RunnableConfig = {"configurable": {"thread_id": session_id}}
 
-    initial_state = {
+    initial_state: dict[str, Any] = {
         "question": payload.query,
         "api_key": api_key,
         "provider": provider,
@@ -169,10 +174,13 @@ async def chat_stream_endpoint(
                 kind = event["event"]
 
                 # 1. Yield stream tokens from the generation step
-                if kind == "on_chat_model_stream" and "generate_answer" in event.get("tags", []):
+                if kind == "on_chat_model_stream" and "generate_answer" in event.get(
+                    "tags", []
+                ):
                     chunk = event["data"].get("chunk")
                     if chunk and hasattr(chunk, "content") and chunk.content:
-                        yield f"data: {json.dumps({'event': 'token', 'text': chunk.content})}\n\n"
+                        token_data = {"event": "token", "text": chunk.content}
+                        yield f"data: {json.dumps(token_data)}\n\n"
 
                 # 2. Capture final state
                 elif kind == "on_chain_end" and event.get("name") == "LangGraph":
@@ -183,7 +191,13 @@ async def chat_stream_endpoint(
                 {"content": doc.page_content, "metadata": doc.metadata}
                 for doc in final_state.get("documents", [])
             ]
-            yield f"data: {json.dumps({\n                'event': 'metadata',\n                'sources': sources,\n                'steps': final_state.get('steps', []),\n                'route': final_state.get('route', ''),\n            })}\n\n"
+            metadata_payload = {
+                "event": "metadata",
+                "sources": sources,
+                "steps": final_state.get("steps", []),
+                "route": final_state.get("route", ""),
+            }
+            yield f"data: {json.dumps(metadata_payload)}\n\n"
 
         except Exception as err:
             logger.error("Error during streaming generation", exc_info=True)

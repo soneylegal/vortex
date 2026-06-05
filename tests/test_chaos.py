@@ -21,7 +21,8 @@ async def test_chaos_router_llm_failure():
     Test that if the LLM fails during routing, the workflow
     recovers and redirects to the fallback node.
     """
-    # Mock get_llm to raise an exception when invoked via structured output ainvoke or direct call
+    # Mock get_llm to raise an exception when invoked via structured output
+    # ainvoke or direct call
     mock_llm = MagicMock()
     mock_structured = AsyncMock()
     mock_structured.side_effect = RuntimeError("LLM Timeout")
@@ -114,10 +115,11 @@ async def test_chaos_generate_llm_failure():
 
     # 2. Mock Vector Store to return a document (so we bypass rewrite loop)
     from langchain_core.documents import Document
+
     mock_vs = MagicMock()
     mock_doc = Document(
         page_content="Sentinel configuration guide.",
-        metadata={"source": "sentinel_manual.md"}
+        metadata={"source": "sentinel_manual.md"},
     )
     mock_vs.search.return_value = [mock_doc]
 

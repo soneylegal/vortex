@@ -28,9 +28,11 @@ def vector_store(temp_chroma_dir):
 
         # Reset the singleton so we get a fresh instance
         import src.app.services.vector_store as vs_module
+
         vs_module._instance = None
 
         from src.app.services.vector_store import VectorStoreService
+
         service = VectorStoreService()
         service.persist_directory = temp_chroma_dir
 
@@ -59,6 +61,7 @@ def semantic_cache(temp_chroma_dir):
         vs_module._instance = None
 
         from src.app.services.cache import SemanticCacheService
+
         service = SemanticCacheService()
 
         yield service
@@ -71,8 +74,12 @@ def semantic_cache(temp_chroma_dir):
 class TestVectorStoreTenantIsolation:
     def test_tenant_isolation_and_counting(self, vector_store):
         """Verify dynamic collections keep tenants isolated."""
-        doc_a = Document(page_content="Tenant A doc content", metadata={"source": "a.md"})
-        doc_b = Document(page_content="Tenant B doc content", metadata={"source": "b.md"})
+        doc_a = Document(
+            page_content="Tenant A doc content", metadata={"source": "a.md"}
+        )
+        doc_b = Document(
+            page_content="Tenant B doc content", metadata={"source": "b.md"}
+        )
 
         vector_store.add_documents([doc_a], tenant_id="tenant-a")
         vector_store.add_documents([doc_b], tenant_id="tenant-b")
@@ -110,12 +117,16 @@ class TestSemanticCacheTenantIsolation:
         )
 
         # Hits on tenant-a
-        hit_a = semantic_cache.lookup("test query", provider="gemini", tenant_id="tenant-a")
+        hit_a = semantic_cache.lookup(
+            "test query", provider="gemini", tenant_id="tenant-a"
+        )
         assert hit_a is not None
         assert hit_a["answer"] == "Tenant A Answer"
 
         # Misses on tenant-b
-        hit_b = semantic_cache.lookup("test query", provider="gemini", tenant_id="tenant-b")
+        hit_b = semantic_cache.lookup(
+            "test query", provider="gemini", tenant_id="tenant-b"
+        )
         assert hit_b is None
 
         # Misses on default
@@ -135,17 +146,13 @@ class TestStreamingAndHistoryEndpoints:
                 "event": "on_chat_model_stream",
                 "name": "gemini",
                 "tags": ["generate_answer"],
-                "data": {
-                    "chunk": AsyncMock(content="Hello")
-                }
+                "data": {"chunk": AsyncMock(content="Hello")},
             }
             yield {
                 "event": "on_chat_model_stream",
                 "name": "gemini",
                 "tags": ["generate_answer"],
-                "data": {
-                    "chunk": AsyncMock(content=" world")
-                }
+                "data": {"chunk": AsyncMock(content=" world")},
             }
             # yield workflow end
             yield {
@@ -154,12 +161,14 @@ class TestStreamingAndHistoryEndpoints:
                 "data": {
                     "output": {
                         "documents": [
-                            Document(page_content="manual info", metadata={"source": "kb.md"})
+                            Document(
+                                page_content="manual info", metadata={"source": "kb.md"}
+                            )
                         ],
                         "steps": ["router", "generate_answer"],
                         "route": "retrieve",
                     }
-                }
+                },
             }
 
         mock_workflow.astream_events = mock_astream_events
@@ -169,14 +178,22 @@ class TestStreamingAndHistoryEndpoints:
 
         response = client.post(
             "/api/v1/chat/stream",
-            json={"query": "test query", "tenant_id": "tenant-a", "session_id": "session-1"},
+            json={
+                "query": "test query",
+                "tenant_id": "tenant-a",
+                "session_id": "session-1",
+            },
         )
 
         assert response.status_code == 200
         assert "text/event-stream" in response.headers["content-type"]
 
         # Parse SSE stream output
-        lines = [line.decode("utf-8") if isinstance(line, bytes) else line for line in response.iter_lines() if line]
+        lines = [
+            line.decode("utf-8") if isinstance(line, bytes) else line
+            for line in response.iter_lines()
+            if line
+        ]
         tokens = []
         metadata = None
 
@@ -202,9 +219,13 @@ class TestStreamingAndHistoryEndpoints:
         client = TestClient(app)
 
         # Mock get_vector_store to return our test fixture vector_store
-        with patch("src.app.api.v1.documents.get_vector_store", return_value=vector_store):
+        with patch(
+            "src.app.api.v1.documents.get_vector_store", return_value=vector_store
+        ):
             # Test Markdown ingestion
-            md_content = b"# Title\n\nSome knowledge description.\n\n## Section\n\nMore details."
+            md_content = (
+                b"# Title\n\nSome knowledge description.\n\n## Section\n\nMore details."
+            )
             md_file = io.BytesIO(md_content)
 
             response = client.post(

@@ -96,14 +96,13 @@ Once running, the interactive Swagger documentation is available at:
 
 ## 🧪 Running Tests
 
-### Unit & Integration Tests
-Vortex is equipped with 26 automated tests verifying routing logic, BYOK headers, semantic cache, vector store, and chaos fallbacks:
+### Local Quality Tools
+Vortex is equipped with automated tests verifying routing logic, BYOK headers, semantic cache, vector store, and chaos fallbacks:
 
 ```bash
 pytest tests/ -v
 ```
 
-### Style & Types Check
 Ensure style and type alignment using Ruff and Mypy before pushing code:
 
 ```bash
@@ -117,6 +116,56 @@ ruff format --check .
 mypy src/ --ignore-missing-imports
 ```
 
+### 🐳 Docker Quality Tools
+Run the quality suite inside standard development containers:
+
+```bash
+# Lint inside container
+make docker-lint
+
+# Format and check inside container
+make docker-format
+
+# Typecheck inside container
+make docker-typecheck
+
+# Run tests inside container
+make docker-test
+
+# Run full CI inside container
+make docker-ci
+```
+
+---
+
+## 👥 Multi-Tenancy & Streaming APIs
+
+Vortex supports dynamic namespace isolation and real-time streaming:
+
+### 1. Document Ingestion API (`POST /api/v1/documents`)
+Upload PDF or Markdown files isolated under a specific `tenant_id`:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/documents \
+  -F "file=@manual.pdf" \
+  -F "tenant_id=tenant-alpha"
+```
+
+This chunks the document and indexes it into the isolated `vortex_kb_tenant-alpha` collection namespace in ChromaDB.
+
+### 2. Conversation Chat Streaming API (`POST /api/v1/chat/stream`)
+Stream responses token-by-token using Server-Sent Events (SSE), maintaining separate session context with `session_id` and isolating data via `tenant_id`:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "How do I configure Sentinel?",
+    "tenant_id": "tenant-alpha",
+    "session_id": "session-123"
+  }'
+```
+
 ---
 
 ## 📚 Building the Documentation Portal
@@ -124,11 +173,12 @@ mypy src/ --ignore-missing-imports
 To edit and preview this documentation portal locally:
 
 ```bash
-# Run local live-reload server
-mkdocs serve
+# Via Makefile (recommended)
+make docs          # Local live-reload server (requires venv)
+make docker-docs   # Serve docs inside Docker container
 ```
 
-Access the preview at [http://127.0.0.1:8000](http://127.0.0.1:8000).
+Access the preview at [http://localhost:8001](http://localhost:8001).
 
 To compile the documentation into static HTML files (suitable for GitHub Pages):
 

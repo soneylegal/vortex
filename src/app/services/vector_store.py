@@ -28,7 +28,9 @@ class VectorStoreService:
             )
         return self._collections[collection_name]
 
-    def search(self, query: str, k: int = 4, tenant_id: str | None = None) -> list[Document]:
+    def search(
+        self, query: str, k: int = 4, tenant_id: str | None = None
+    ) -> list[Document]:
         """Search the vector store for relevant documents."""
         db = self._get_collection(tenant_id)
         return db.similarity_search(query, k=k)

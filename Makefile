@@ -1,4 +1,4 @@
-.PHONY: install test lint format run ingest ci docker clean docker-lint docker-format docker-typecheck docker-test docker-ci
+.PHONY: install test lint format run ingest ci docker clean docker-lint docker-format docker-typecheck docker-test docker-ci docs docker-docs
 
 # ── Development ─────────────────────────────────────────────────────────
 
@@ -58,6 +58,14 @@ docker-test:
 
 docker-ci: docker-lint docker-typecheck docker-test
 	@echo "✓ All Docker CI checks passed."
+
+# ── Documentation ───────────────────────────────────────────────────────
+
+docs:
+	mkdocs serve
+
+docker-docs:
+	docker compose run --rm -p 8001:8001 api mkdocs serve -a 0.0.0.0:8001
 
 # ── Cleanup ─────────────────────────────────────────────────────────────
 

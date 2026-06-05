@@ -34,7 +34,9 @@ class SemanticCacheService:
         )
         self.distance_threshold = settings.semantic_cache_threshold
 
-    def lookup(self, query: str, provider: str | None = None, tenant_id: str | None = None) -> dict | None:
+    def lookup(
+        self, query: str, provider: str | None = None, tenant_id: str | None = None
+    ) -> dict | None:
         """
         Lookup a query in the cache. Matches semantically similar queries
         with cosine distance below the configured threshold.

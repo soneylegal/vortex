@@ -5,8 +5,13 @@ class ChatRequest(BaseModel):
     """Incoming chat request."""
 
     query: str = Field(..., description="The user's technical question.")
-    tenant_id: str | None = Field(default=None, description="Optional tenant identifier for isolated namespace partition.")
-    session_id: str | None = Field(default=None, description="Optional session identifier for history tracking.")
+    tenant_id: str | None = Field(
+        default=None,
+        description="Optional tenant identifier for isolated namespace partition.",
+    )
+    session_id: str | None = Field(
+        default=None, description="Optional session identifier for history tracking."
+    )
 
 
 class SourceDocument(BaseModel):

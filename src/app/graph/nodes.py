@@ -127,12 +127,14 @@ async def generate_node(state: AgentState) -> dict[str, Any]:
 
     try:
         llm = get_llm(api_key=state.get("api_key"), provider=state.get("provider"))
-        
+
         # Build history string
         history = state.get("history") or []
         history_str = ""
         for turn in history:
-            history_str += f"User: {turn.get('question', '')}\nAssistant: {turn.get('generation', '')}\n\n"
+            q = turn.get("question", "")
+            g = turn.get("generation", "")
+            history_str += f"User: {q}\nAssistant: {g}\n\n"
 
         prompt = ChatPromptTemplate.from_template(
             "You are an expert IT infrastructure support "
@@ -151,12 +153,14 @@ async def generate_node(state: AgentState) -> dict[str, Any]:
 
         generation = await rag_chain.ainvoke(
             {"context": docs_content, "question": question, "history": history_str},
-            config={"tags": ["generate_answer"]}
+            config={"tags": ["generate_answer"]},
         )
 
         # Update history
         new_history = list(history)
-        new_history.append({"question": question, "generation": str(generation.content)})
+        new_history.append(
+            {"question": question, "generation": str(generation.content)}
+        )
 
         return {
             "documents": documents,
@@ -197,16 +201,19 @@ async def direct_response_node(state: AgentState) -> dict[str, Any]:
 
     try:
         llm = get_llm(api_key=state.get("api_key"), provider=state.get("provider"))
-        
+
         # Build history string
         history = state.get("history") or []
         history_str = ""
         for turn in history:
-            history_str += f"User: {turn.get('question', '')}\nAssistant: {turn.get('generation', '')}\n\n"
+            q = turn.get("question", "")
+            g = turn.get("generation", "")
+            history_str += f"User: {q}\nAssistant: {g}\n\n"
 
         prompt = ChatPromptTemplate.from_template(
-            "You are a helpful IT support assistant. Answer the following question "
-            "directly and concisely, taking into account the conversation history if relevant.\n\n"
+            "You are a helpful IT support assistant. Answer the following "
+            "question directly and concisely, taking into account the "
+            "conversation history if relevant.\n\n"
             "Conversation History:\n{history}\n"
             "Question: {question}\n"
             "Answer:"
@@ -215,12 +222,14 @@ async def direct_response_node(state: AgentState) -> dict[str, Any]:
         chain = prompt | llm
         generation = await chain.ainvoke(
             {"question": question, "history": history_str},
-            config={"tags": ["generate_answer"]}
+            config={"tags": ["generate_answer"]},
         )
 
         # Update history
         new_history = list(history)
-        new_history.append({"question": question, "generation": str(generation.content)})
+        new_history.append(
+            {"question": question, "generation": str(generation.content)}
+        )
 
         return {
             "question": question,

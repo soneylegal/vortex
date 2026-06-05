@@ -1,11 +1,11 @@
+import asyncio
 import io
 import logging
-import asyncio
 
+import pypdf
 from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-import pypdf
 
 from src.app.core.rate_limit import limiter
 from src.app.services.vector_store import get_vector_store
@@ -24,9 +24,11 @@ async def upload_document(
     tenant_id: str | None = Form(None),
 ):
     """
-    Upload a document (.md or .pdf) to be chunked and indexed into the vector store.
-    
-    If tenant_id is provided, the document is indexed into the corresponding tenant collection partition.
+    Upload a document (.md or .pdf) to be chunked and indexed into the
+    vector store.
+
+    If tenant_id is provided, the document is indexed into the corresponding
+    tenant collection partition.
     """
     filename = file.filename or "unknown"
     if not (filename.endswith(".md") or filename.endswith(".pdf")):
@@ -37,7 +39,7 @@ async def upload_document(
 
     try:
         content_bytes = await file.read()
-        
+
         if filename.endswith(".md"):
             try:
                 content = content_bytes.decode("utf-8")
@@ -85,7 +87,8 @@ async def upload_document(
             for s in splits:
                 s.metadata["tenant_id"] = tenant_id
 
-        # Index splits into Chroma DB collection partition asynchronously on a thread pool
+        # Index splits into Chroma DB collection partition asynchronously
+        # on a thread pool
         vs = get_vector_store()
         await asyncio.to_thread(vs.add_documents, splits, tenant_id=tenant_id)
 
@@ -106,7 +109,9 @@ async def upload_document(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error during document ingestion endpoint execution", exc_info=True)
+        logger.error(
+            "Error during document ingestion endpoint execution", exc_info=True
+        )
         raise HTTPException(
             status_code=500,
             detail=f"An unexpected error occurred during ingestion: {str(e)}",

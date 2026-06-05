@@ -38,8 +38,9 @@ async def router_node(state: AgentState) -> dict[str, Any]:
     stored in state["route"] for downstream conditional edges and API observability.
     """
     question = state["question"]
-    steps = list(state.get("steps", []))
-    steps.append("router")
+    # Reset steps for each new invocation to prevent carry-over
+    # from previous turns when using MemorySaver checkpointer
+    steps = ["router"]
 
     try:
         llm = get_llm(api_key=state.get("api_key"), provider=state.get("provider"))
